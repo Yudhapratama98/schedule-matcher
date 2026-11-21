@@ -149,3 +149,10 @@ def test_fastapi_rest_endpoints():
     r = client.get("/api/backup-db")
     assert r.status_code == 200
     assert len(r.content) > 0
+
+def test_requirements_include_testclient_deps():
+    req_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "requirements.txt")
+    with open(req_path, "r", encoding="utf-8") as f:
+        reqs = f.read().lower()
+    assert "httpx>=" in reqs
+    assert "starlette>=0.27.0,<1.0.0" in reqs

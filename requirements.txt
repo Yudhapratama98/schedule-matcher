@@ -1,10 +1,11 @@
-fastapi>=0.100.0
+fastapi>=0.100.0,<1.0.0
 uvicorn>=0.20.0
 python-multipart>=0.0.9
 ortools>=9.6.0
 openpyxl>=3.1.0
 pytest>=7.0.0
-starlette>=0.27.0
+starlette>=0.27.0,<1.0.0
+httpx>=0.24.0
 gspread>=6.0.0
 google-auth>=2.20.0
 pyinstaller>=6.0.0
