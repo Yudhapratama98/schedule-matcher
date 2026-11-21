@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Penjadwalan Ujian Skripsi</title>
+  <title>Sistem Penjadwalan Sidang Skripsi</title>
   <style>
     :root {
       --bg-canvas: #f8fafc;
@@ -17,26 +17,25 @@
       --primary-fg: #ffffff;
       --accent-badge: #f0fdf4;
       --accent-badge-text: #166534;
+      --lock-bg: #eff6ff;
+      --lock-border: #bfdbfe;
+      --lock-text: #1d4ed8;
       --warning-bg: #fffbeb;
       --warning-border: #fde68a;
       --warning-text: #92400e;
       --danger-bg: #fef2f2;
       --danger-border: #fecaca;
-      --danger-text: #991b1b;
+      --danger-text: #b91c1c;
       --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: var(--font-family);
       background-color: var(--bg-canvas);
       color: var(--text-main);
-      font-size: 13.5px;
+      font-size: 13px;
       line-height: 1.45;
       font-variant-numeric: tabular-nums;
       display: flex;
@@ -45,9 +44,9 @@
       overflow: hidden;
     }
 
-    /* Top Navigation Bar */
+    /* Header */
     header {
-      height: 52px;
+      height: 54px;
       background: var(--bg-panel);
       border-bottom: 1px solid var(--border-color);
       display: flex;
@@ -57,55 +56,18 @@
       flex-shrink: 0;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-title { font-size: 15px; font-weight: 600; color: var(--text-main); letter-spacing: -0.01em; }
+    .brand-sub { font-size: 12px; color: var(--text-muted); border-left: 1px solid var(--border-color); padding-left: 12px; }
 
-    .brand-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-main);
-      letter-spacing: -0.01em;
-    }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
 
-    .brand-sub {
-      font-size: 12px;
-      color: var(--text-muted);
-      border-left: 1px solid var(--border-color);
-      padding-left: 12px;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--accent-badge);
-      color: var(--accent-badge-text);
-      font-size: 12px;
-      font-weight: 500;
-      padding: 4px 10px;
-      border-radius: 4px;
-      border: 1px solid #bbf7d0;
-    }
-
-    .status-badge.hidden {
-      display: none;
-    }
-
-    .btn-sync {
+    .btn-primary {
       background: var(--primary);
       color: var(--primary-fg);
       border: 1px solid var(--primary);
-      border-radius: 4px;
-      font-size: 13px;
+      border-radius: 5px;
+      font-size: 12.5px;
       font-weight: 500;
       padding: 6px 14px;
       cursor: pointer;
@@ -114,22 +76,15 @@
       gap: 6px;
       transition: background 0.15s ease;
     }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .btn-sync:hover:not(:disabled) {
-      background: var(--primary-hover);
-    }
-
-    .btn-sync:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    .btn-download {
+    .btn-secondary {
       background: var(--bg-panel);
       color: var(--text-main);
       border: 1px solid var(--border-color);
-      border-radius: 4px;
-      font-size: 13px;
+      border-radius: 5px;
+      font-size: 12.5px;
       font-weight: 500;
       padding: 6px 12px;
       cursor: pointer;
@@ -138,324 +93,128 @@
       gap: 6px;
       transition: background 0.15s ease, border-color 0.15s ease;
     }
+    .btn-secondary:hover:not(:disabled) { background: #f1f5f9; border-color: #cbd5e1; }
 
-    .btn-download:hover:not(:disabled) {
-      background: #f1f5f9;
-      border-color: #cbd5e1;
-    }
+    /* Layout */
+    .app-layout { display: flex; flex: 1; height: calc(100vh - 54px); overflow: hidden; }
 
-    .btn-download:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    /* Main Container Layout */
-    .app-container {
-      display: flex;
-      flex: 1;
-      height: calc(100vh - 52px);
-      overflow: hidden;
-    }
-
-    /* Left Sidebar: Controls & Upload */
-    .sidebar {
-      width: 340px;
+    .nav-rail {
+      width: 215px;
       background: var(--bg-panel);
       border-right: 1px solid var(--border-color);
-      padding: 18px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      overflow-y: auto;
       flex-shrink: 0;
+      padding: 14px 10px;
+      gap: 4px;
     }
 
-    .source-switch {
+    .nav-item {
       display: flex;
-      background: #f1f5f9;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
       border-radius: 5px;
-      padding: 2px;
-      margin-bottom: 4px;
-    }
-
-    .source-btn {
-      flex: 1;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
       background: none;
-      border: none;
-      padding: 6px 8px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-muted);
-      border-radius: 4px;
-      cursor: pointer;
-      text-align: center;
-      transition: background 0.15s ease, color 0.15s ease;
-    }
-
-    .source-btn.active {
-      background: #ffffff;
-      color: var(--text-main);
-      font-weight: 600;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-
-    .section-title {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
-
-    .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-
-    label {
-      font-size: 12.5px;
-      font-weight: 500;
-      color: var(--text-main);
-    }
-
-    .text-input {
+      text-align: left;
       width: 100%;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      padding: 7px 10px;
-      font-size: 12px;
-      color: var(--text-main);
-      background: #ffffff;
-      outline: none;
-      transition: border-color 0.15s ease;
+      transition: all 0.15s ease;
     }
+    .nav-item:hover { background: #f1f5f9; color: var(--text-main); }
+    .nav-item.active { background: #f0fdfa; color: var(--primary); font-weight: 600; }
 
-    .text-input:focus {
-      border-color: var(--border-focus);
-    }
+    .content-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-canvas); }
+    .view-container { flex: 1; display: none; flex-direction: column; overflow-y: auto; padding: 20px 24px; }
+    .view-container.active { display: flex; }
 
-    .file-dropzone {
-      border: 1px dashed var(--border-color);
-      border-radius: 5px;
-      padding: 10px 12px;
-      background: #fafafa;
-      cursor: pointer;
-      transition: border-color 0.15s ease, background 0.15s ease;
-      position: relative;
-    }
+    .view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-shrink: 0; }
+    .view-title { font-size: 16px; font-weight: 600; color: var(--text-main); }
+    .view-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 
-    .file-dropzone:hover {
-      border-color: var(--border-focus);
-      background: #fdfdfd;
-    }
-
-    .file-dropzone input[type="file"] {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      cursor: pointer;
-    }
-
-    .file-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .file-name {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-main);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .file-desc {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .radio-option {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      margin-bottom: 8px;
-      font-size: 12.5px;
-      cursor: pointer;
-    }
-
-    .radio-option input {
-      margin-top: 3px;
-    }
-
-    .number-input {
-      width: 100%;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      padding: 6px 10px;
-      font-size: 13px;
-      color: var(--text-main);
-      background: #ffffff;
-      outline: none;
-    }
-
-    .number-input:focus {
-      border-color: var(--border-focus);
-    }
-
-    .btn-submit {
-      width: 100%;
-      background: var(--text-main);
-      color: #ffffff;
-      border: none;
-      border-radius: 4px;
-      font-size: 13px;
-      font-weight: 500;
-      padding: 10px;
-      cursor: pointer;
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-      transition: opacity 0.15s ease;
-      margin-top: 4px;
-    }
-
-    .btn-submit:hover:not(:disabled) {
-      opacity: 0.9;
-    }
-
-    .btn-submit:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    /* Right Main Content Area */
-    .main-workspace {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      background: var(--bg-canvas);
-    }
-
-    /* Tabs Bar */
-    .tab-bar {
-      height: 42px;
-      background: var(--bg-panel);
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-      flex-shrink: 0;
-    }
-
-    .tabs {
-      display: flex;
-      gap: 20px;
-      height: 100%;
-    }
-
-    .tab-button {
-      background: none;
-      border: none;
-      height: 100%;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-muted);
-      cursor: pointer;
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .tab-button.active {
-      color: var(--text-main);
-      font-weight: 600;
-    }
-
-    .tab-button.active::after {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: var(--primary);
-    }
-
-    .search-box {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .search-box input {
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      padding: 4px 10px;
-      font-size: 12px;
-      width: 220px;
-      outline: none;
-    }
-
-    .search-box input:focus {
-      border-color: var(--border-focus);
-    }
-
-    /* Tab Panels */
-    .panel-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-    }
-
-    /* Alerts */
-    .banner {
-      padding: 10px 14px;
-      border-radius: 4px;
+    /* KPI Strip */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
       margin-bottom: 16px;
-      font-size: 12px;
+    }
+    .kpi-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 12px 16px;
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
+    .kpi-label { font-size: 11.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+    .kpi-value { font-size: 20px; font-weight: 700; color: var(--text-main); }
+    .kpi-card.ok .kpi-value { color: var(--accent-badge-text); }
+    .kpi-card.danger { border-color: var(--danger-border); background: var(--danger-bg); }
+    .kpi-card.danger .kpi-value { color: var(--danger-text); }
 
-    .banner.warning {
-      background: var(--warning-bg);
-      border: 1px solid var(--warning-border);
-      color: var(--warning-text);
+    /* Toolbar & Filter Chips */
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
     }
-
-    .banner.danger {
-      background: var(--danger-bg);
-      border: 1px solid var(--danger-border);
-      color: var(--danger-text);
+    .filter-chips { display: flex; gap: 6px; align-items: center; }
+    .chip {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
     }
+    .chip:hover { border-color: #cbd5e1; color: var(--text-main); }
+    .chip.active { background: var(--text-main); color: #ffffff; border-color: var(--text-main); }
 
-    .banner.success {
-      background: var(--accent-badge);
-      border: 1px solid #bbf7d0;
-      color: var(--accent-badge-text);
+    /* Cards & Tables */
+    .table-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 16px;
     }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12.5px; }
+    th {
+      background: #fafafa;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; color: var(--text-main); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+    tr.row-conflict td:first-child { border-left: 3px solid var(--danger-text); }
+    tr.row-conflict { background: #fffafa; }
 
-    /* Schedule Cards (Grouped by Session) */
+    /* Session Cards */
     .session-card {
       background: var(--bg-panel);
       border: 1px solid var(--border-color);
-      border-radius: 5px;
-      margin-bottom: 16px;
+      border-radius: 6px;
+      margin-bottom: 14px;
       overflow: hidden;
     }
-
     .session-header {
       background: #f1f5f9;
       padding: 8px 14px;
@@ -464,53 +223,33 @@
       color: var(--text-main);
       display: flex;
       justify-content: space-between;
+      align-items: center;
       border-bottom: 1px solid var(--border-color);
     }
 
-    .session-meta {
-      color: var(--text-muted);
-      font-weight: 400;
-      font-size: 12px;
-    }
-
-    /* Dense Data Table */
-    .table-container {
-      width: 100%;
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 12.5px;
-    }
-
-    th {
-      background: #fafafa;
-      color: var(--text-muted);
+    /* 1-Click Lock Button */
+    .btn-lock {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
       font-weight: 600;
-      font-size: 11.5px;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      background: #ffffff;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+    }
+    .btn-lock:hover { border-color: #94a3b8; color: var(--text-main); }
+    .btn-lock.is-locked {
+      background: var(--lock-bg);
+      border-color: var(--lock-border);
+      color: var(--lock-text);
     }
 
-    td {
-      padding: 7px 12px;
-      border-bottom: 1px solid #f1f5f9;
-      color: var(--text-main);
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    tr:hover td {
-      background: #f8fafc;
-    }
-
+    /* Pills & Banners */
     .pill {
       display: inline-block;
       font-size: 10.5px;
@@ -519,62 +258,61 @@
       border-radius: 3px;
       background: #e2e8f0;
       color: #334155;
-      margin-left: 4px;
     }
+    .pill.ok { background: var(--accent-badge); color: var(--accent-badge-text); border: 1px solid #bbf7d0; }
+    .pill.conflict { background: var(--danger-bg); color: var(--danger-text); border: 1px solid var(--danger-border); }
 
-    .bar-container {
-      background: #e2e8f0;
-      height: 6px;
-      border-radius: 3px;
-      width: 90px;
-      overflow: hidden;
-      display: inline-block;
-      vertical-align: middle;
-      margin-left: 8px;
-    }
-
-    .bar-fill {
-      background: var(--primary);
-      height: 100%;
-      border-radius: 3px;
-    }
-
-    /* Empty state */
-    .empty-state {
+    .banner {
+      padding: 10px 14px;
+      border-radius: 5px;
+      margin-bottom: 16px;
+      font-size: 12px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 60px 20px;
-      color: var(--text-muted);
+      gap: 4px;
+    }
+    .banner.danger { background: var(--danger-bg); border: 1px solid var(--danger-border); color: var(--danger-text); }
+
+    /* Availability Matrix */
+    .matrix-cell {
+      cursor: pointer;
       text-align: center;
-      gap: 8px;
+      padding: 6px 4px;
+      font-size: 11px;
+      user-select: none;
+      transition: background 0.1s ease;
+      border-right: 1px solid #f1f5f9;
     }
+    .matrix-cell:hover { background: #e2e8f0; }
+    .matrix-cell.blocked { background: #fee2e2; color: #991b1b; font-weight: 600; }
+    .matrix-cell.free { background: #ffffff; color: #166534; }
 
-    .empty-state-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-main);
+    /* Form Controls */
+    .input-text, .input-select {
+      width: 100%;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 12.5px;
+      outline: none;
+      background: #ffffff;
     }
+    .input-text:focus, .input-select:focus { border-color: var(--border-focus); }
 
-    /* Modal */
+    /* Modals */
     .modal-backdrop {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(15, 23, 42, 0.45);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
     }
-
     .modal-card {
       background: #ffffff;
       border-radius: 6px;
-      width: 440px;
+      width: 480px;
       max-width: 90%;
       padding: 20px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.15);
@@ -582,614 +320,1010 @@
       flex-direction: column;
       gap: 12px;
     }
+    .modal-header { font-size: 14px; font-weight: 600; }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-label { font-size: 12px; font-weight: 500; color: var(--text-main); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-    .modal-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-main);
+    .bar-container {
+      background: #e2e8f0;
+      height: 6px;
+      border-radius: 3px;
+      width: 80px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
     }
+    .bar-fill { background: var(--primary); height: 100%; border-radius: 3px; }
 
-    /* Spinner */
-    .spinner {
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      border-top: 2px solid #ffffff;
-      width: 14px;
-      height: 14px;
-      animation: spin 0.8s linear infinite;
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 2000;
     }
+    .toast {
+      background: var(--text-main);
+      color: #ffffff;
+      padding: 10px 16px;
+      border-radius: 5px;
+      font-size: 12.5px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: fadeIn 0.2s ease;
+    }
+    .toast.error { background: var(--danger-text); }
+    .toast.success { background: var(--primary); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    /* Print Header (hidden on screen) */
+    .print-header { display: none; margin-bottom: 16px; border-bottom: 2px solid #0f172a; padding-bottom: 8px; }
+
+    @media print {
+      body { height: auto; overflow: visible; background: #ffffff; }
+      header, .nav-rail, .toolbar, .kpi-grid, .btn-lock, .btn-secondary, .no-print { display: none !important; }
+      .app-layout, .content-area, .view-container { display: block; height: auto; overflow: visible; padding: 0; }
+      .print-header { display: block; }
+      .session-card { break-inside: avoid; border: 1px solid #cbd5e1; margin-bottom: 12px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- Top Navigation Header -->
+  <!-- Top Header -->
   <header>
     <div class="brand">
-      <div class="brand-title">Penjadwalan Ujian Skripsi</div>
-      <div class="brand-sub">Sistem Otomasi Jadwal & Beban Penguji</div>
+      <div class="brand-title">Sistem Penjadwalan Sidang Skripsi</div>
+      <div class="brand-sub" id="headerInstitutionName">Program Studi Perencanaan Wilayah dan Kota - ITK</div>
     </div>
     <div class="header-actions">
-      <div id="statusBadge" class="status-badge hidden">
-        <span id="statusText">0/0 Mahasiswa Terjadwal</span>
-      </div>
-      <button id="btnSyncGSheet" class="btn-sync" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
-        </svg>
-        <span id="btnSyncText">Tulis ke Google Sheet</span>
+      <button class="btn-primary" id="btnRunSchedule" onclick="runAutoSchedule()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        <span>Buat Jadwal Otomatis</span>
       </button>
-      <button id="btnDownload" class="btn-download" disabled>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
+      <button class="btn-secondary" onclick="window.print()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        <span>Cetak / PDF</span>
+      </button>
+      <button class="btn-secondary" onclick="exportScheduleXlsx()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
         <span>Unduh .xlsx</span>
       </button>
     </div>
   </header>
 
-  <div class="app-container">
-    <!-- Left Panel: Controls & Upload -->
-    <aside class="sidebar">
-      <div>
-        <div class="section-title">Sumber Data</div>
-        <div class="source-switch">
-          <button type="button" class="source-btn active" id="btnModeGSheet" onclick="setSourceMode('gsheet')">Link Google Sheets</button>
-          <button type="button" class="source-btn" id="btnModeFile" onclick="setSourceMode('file')">Unggah Berkas .xlsx</button>
+  <div class="app-layout">
+    <!-- Left Navigation Rail -->
+    <nav class="nav-rail">
+      <button class="nav-item active" onclick="switchView('schedule')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <span>Jadwal & Konflik</span>
+      </button>
+      <button class="nav-item" onclick="switchView('students')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span>Pengajuan Mahasiswa</span>
+      </button>
+      <button class="nav-item" onclick="switchView('lecturers')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <span>Dosen & Berhalangan</span>
+      </button>
+      <button class="nav-item" onclick="switchView('settings')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Pengaturan & Data</span>
+      </button>
+    </nav>
+
+    <!-- Main Workspace -->
+    <main class="content-area">
+
+      <!-- ================= VIEW 1: JADWAL & KONFLIK ================= -->
+      <section class="view-container active" id="viewSchedule">
+        <div class="print-header">
+          <h2 id="printTitle">Jadwal Ujian Sidang Skripsi</h2>
+          <p id="printSub" style="font-size: 12px; color: #475569;"></p>
         </div>
 
-        <!-- Google Sheets Mode Inputs -->
-        <div id="sectionGSheet">
-          <div class="field-group" style="margin-bottom: 10px;">
-            <label for="inputMasterUrl">Master Ujian Skripsi</label>
-            <input type="text" id="inputMasterUrl" class="text-input" placeholder="https://docs.google.com/spreadsheets/d/...">
-            <div class="file-desc" id="masterEnvNote">Memuat sheet Mahasiswa, Dosen, Jadwal</div>
+        <!-- KPI Summary Strip -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Pengajuan</div>
+            <div class="kpi-value" id="kpiEligible">0</div>
           </div>
-
-          <div class="field-group">
-            <label for="inputBerhalanganUrl">Jadwal Berhalangan Dosen</label>
-            <input type="text" id="inputBerhalanganUrl" class="text-input" placeholder="https://docs.google.com/spreadsheets/d/...">
-            <div class="file-desc" id="berhEnvNote">Memuat ketersediaan sesi dosen</div>
+          <div class="kpi-card">
+            <div class="kpi-label">Sudah Terjadwal</div>
+            <div class="kpi-value" id="kpiScheduled">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Slot Terkunci</div>
+            <div class="kpi-value" id="kpiLocked" style="color: var(--lock-text);">0</div>
+          </div>
+          <div class="kpi-card ok" id="kpiConflictCard">
+            <div class="kpi-label">Status Bentrok</div>
+            <div class="kpi-value" id="kpiConflicts">0 Bentrok</div>
           </div>
         </div>
 
-        <!-- File Upload Mode Inputs -->
-        <div id="sectionFile" style="display: none;">
-          <div class="field-group" style="margin-bottom: 12px;">
-            <label>Berkas Master Ujian (.xlsx)</label>
-            <div class="file-dropzone" id="zoneMaster">
-              <input type="file" id="inputMaster" accept=".xlsx">
-              <div class="file-meta">
-                <div class="file-name" id="nameMaster">Pilih file master.xlsx...</div>
-                <div class="file-desc">Memuat sheet Mahasiswa, Dosen, Jadwal</div>
+        <!-- Toolbar: Filter Chips + Search + Bulk Lock -->
+        <div class="toolbar">
+          <div class="filter-chips">
+            <button class="chip active" onclick="setScheduleFilter('all', this)">Semua</button>
+            <button class="chip" onclick="setScheduleFilter('locked', this)">Terkunci</button>
+            <button class="chip" onclick="setScheduleFilter('unlocked', this)">Terbuka</button>
+            <button class="chip" onclick="setScheduleFilter('conflict', this)">Ada Bentrok</button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn-secondary" style="padding: 5px 10px; font-size: 12px;" onclick="bulkLock(true)">Kunci Semua</button>
+            <button class="btn-secondary" style="padding: 5px 10px; font-size: 12px;" onclick="bulkLock(false)">Buka Kunci Semua</button>
+            <input type="text" id="scheduleSearch" class="input-text" style="width: 210px;" placeholder="Cari mahasiswa atau dosen..." oninput="renderFilteredSchedule()">
+          </div>
+        </div>
+
+        <div id="conflictAlertBanner" class="banner danger" style="display: none;"></div>
+
+        <div id="scheduleCardsContainer"></div>
+
+        <div class="view-header" style="margin-top: 24px;">
+          <div class="view-title">Rekapitulasi Beban Penguji Dosen</div>
+        </div>
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 50px;">Kode</th>
+                <th>Nama Dosen</th>
+                <th style="width: 100px; text-align: center;">P1/P2</th>
+                <th style="width: 100px; text-align: center;">Penguji 2</th>
+                <th style="width: 90px; text-align: center;">Total</th>
+                <th style="width: 140px;">Distribusi Beban</th>
+              </tr>
+            </thead>
+            <tbody id="workloadTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 2: PENGAJUAN MAHASISWA ================= -->
+      <section class="view-container" id="viewStudents">
+        <div class="view-header">
+          <div>
+            <div class="view-title">Pengajuan Sidang Mahasiswa</div>
+            <div class="view-desc">Kelola peserta sidang, pembimbing, dan status kelayakan ujian.</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <select id="filterStudentStatus" class="input-select" style="width: 150px;" onchange="loadStudents()">
+              <option value="">Semua Status</option>
+              <option value="eligible">Layak (Eligible)</option>
+              <option value="postponed">Ditunda</option>
+            </select>
+            <button class="btn-primary" onclick="openStudentModal()">+ Tambah Mahasiswa</button>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 40px;">No</th>
+                <th>Nama Mahasiswa</th>
+                <th style="width: 110px;">NIM</th>
+                <th>Pembimbing</th>
+                <th>Penguji 1</th>
+                <th>Penguji 2 Usulan</th>
+                <th style="width: 90px; text-align: center;">Status</th>
+                <th style="width: 100px; text-align: center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 3: DOSEN & BERHALANGAN ================= -->
+      <section class="view-container" id="viewLecturers">
+        <div class="view-header">
+          <div>
+            <div class="view-title">Matriks Ketersediaan Dosen</div>
+            <div class="view-desc">Klik pada kotak sesi untuk menandai dosen <strong>Berhalangan (Merah)</strong> atau <strong>Bisa (Putih)</strong>.</div>
+          </div>
+        </div>
+
+        <div class="table-card" style="overflow-x: auto;">
+          <table id="matrixTable">
+            <thead>
+              <tr id="matrixHeaderDays"></tr>
+              <tr id="matrixHeaderSessions"></tr>
+            </thead>
+            <tbody id="matrixTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 4: PENGATURAN & DATA ================= -->
+      <section class="view-container" id="viewSettings">
+        <div class="view-header">
+          <div>
+            <div class="view-title">Pengaturan Pelaksanaan & Manajemen Data</div>
+            <div class="view-desc">Sesuaikan identitas program studi, jam sesi, nama ruangan, atau impor data semester baru.</div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <!-- Left column: Days & Session Times -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="table-card" style="padding: 16px; margin-bottom: 0;">
+              <div style="font-weight: 600; margin-bottom: 12px;">Hari Pelaksanaan Ujian</div>
+              <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <input type="date" id="inputNewDate" class="input-text">
+                <input type="text" id="inputNewDayLabel" class="input-text" placeholder="Label (cth: Rabu)">
+                <button class="btn-primary" onclick="addExamDay()">+ Tambah</button>
+              </div>
+              <table>
+                <thead><tr><th>Tanggal</th><th>Hari</th><th style="width: 50px;">Aksi</th></tr></thead>
+                <tbody id="daysTbody"></tbody>
+              </table>
+            </div>
+
+            <div class="table-card" style="padding: 16px; margin-bottom: 0;">
+              <div style="font-weight: 600; margin-bottom: 12px;">Jam Sesi Harian</div>
+              <div id="sessionsConfigList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            </div>
+          </div>
+
+          <!-- Right column: Institution, Rooms, Import/Backup -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="table-card" style="padding: 16px; margin-bottom: 0;">
+              <div style="font-weight: 600; margin-bottom: 12px;">Identitas Prodi & Ruangan</div>
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label class="form-label">Nama Program Studi / Institusi</label>
+                <input type="text" id="settingInstitution" class="input-text">
+              </div>
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label class="form-label">Daftar Nama Ruangan (pisahkan dengan koma)</label>
+                <input type="text" id="settingRoomNames" class="input-text">
+              </div>
+              <div class="form-row" style="margin-bottom: 12px;">
+                <div class="form-group">
+                  <label class="form-label">Kapasitas Ruang per Sesi</label>
+                  <input type="number" id="settingMaxRooms" class="input-text" min="1" max="10" value="5">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Mode Penguji 2</label>
+                  <select id="settingP2Mode" class="input-select">
+                    <option value="auto">Otomatis Seimbangkan</option>
+                    <option value="keep">Pertahankan Usulan</option>
+                  </select>
+                </div>
+              </div>
+              <button class="btn-primary" onclick="saveSettings()">Simpan Pengaturan</button>
+            </div>
+
+            <div class="table-card" style="padding: 16px; margin-bottom: 0;">
+              <div style="font-weight: 600; margin-bottom: 8px;">Impor Semester Baru & Backup</div>
+              <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                Gunakan fitur ini untuk memuat ulang seluruh data dari file Excel baru atau mencadangkan database lokal.
+              </div>
+              <div class="form-row" style="margin-bottom: 10px;">
+                <div class="form-group">
+                  <label class="form-label">Master Excel (.xlsx)</label>
+                  <input type="file" id="importMasterFile" accept=".xlsx" class="input-text">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Berhalangan Excel (.xlsx)</label>
+                  <input type="file" id="importBerhFile" accept=".xlsx" class="input-text">
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-secondary" onclick="importNewXlsx()">Impor & Reset Data</button>
+                <button class="btn-secondary" onclick="window.location.href='/api/backup-db'">Unduh Backup (.db)</button>
               </div>
             </div>
           </div>
-
-          <div class="field-group">
-            <label>Berkas Berhalangan Dosen (.xlsx)</label>
-            <div class="file-dropzone" id="zoneBerhalangan">
-              <input type="file" id="inputBerhalangan" accept=".xlsx">
-              <div class="file-meta">
-                <div class="file-name" id="nameBerhalangan">Pilih file berhalangan.xlsx...</div>
-                <div class="file-desc">Memuat ketersediaan sesi dosen</div>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
+      </section>
 
-      <div>
-        <div class="section-title">Konfigurasi Penjadwalan</div>
-
-        <div class="field-group" style="margin-bottom: 12px;">
-          <label style="margin-bottom: 4px;">Penugasan Penguji 2</label>
-          <label class="radio-option">
-            <input type="radio" name="p2Mode" value="keep" checked>
-            <div>
-              <strong>Pertahankan dari sheet Mahasiswa</strong>
-              <div class="file-desc">Gunakan penguji 2 yang telah terisi (jika ada)</div>
-            </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="p2Mode" value="auto">
-            <div>
-              <strong>Otomatis pilih & seimbangkan</strong>
-              <div class="file-desc">Distribusikan beban penguji 2 secara merata</div>
-            </div>
-          </label>
-        </div>
-
-        <div class="field-group" style="margin-bottom: 14px;">
-          <label for="inputRooms">Kapasitas Ruangan per Sesi</label>
-          <input type="number" id="inputRooms" class="number-input" value="5" min="1" max="10">
-          <div class="file-desc">Jumlah sidang paralel yang dapat berjalan bersamaan</div>
-        </div>
-
-        <button id="btnSubmit" class="btn-submit">
-          <span id="btnSubmitText">Buat Jadwal</span>
-        </button>
-      </div>
-    </aside>
-
-    <!-- Right Panel: Tabs & Results -->
-    <main class="main-workspace">
-      <!-- Tabs Bar -->
-      <div class="tab-bar">
-        <div class="tabs">
-          <button class="tab-button active" id="tabBtnSchedule" onclick="switchTab('schedule')">
-            Jadwal Ujian <span id="scheduleCount" style="color: var(--text-muted); font-weight: normal;">(0)</span>
-          </button>
-          <button class="tab-button" id="tabBtnWorkload" onclick="switchTab('workload')">
-            Beban Dosen <span id="lecturerCount" style="color: var(--text-muted); font-weight: normal;">(0)</span>
-          </button>
-        </div>
-        <div class="search-box" id="searchBoxContainer">
-          <input type="text" id="filterInput" placeholder="Cari mahasiswa atau dosen..." oninput="filterSchedule()">
-        </div>
-      </div>
-
-      <!-- Main Panel Contents -->
-      <div class="panel-content">
-        <!-- Success Banner -->
-        <div id="successBanner" class="banner success" style="display: none;"></div>
-
-        <!-- Error Banner -->
-        <div id="errorBanner" class="banner danger" style="display: none;"></div>
-
-        <!-- Warning Banner -->
-        <div id="warningBanner" class="banner warning" style="display: none;"></div>
-
-        <!-- Tab 1: Schedule -->
-        <div id="panelSchedule">
-          <div id="scheduleContainer">
-            <div class="empty-state">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-              </svg>
-              <div class="empty-state-title">Belum Ada Jadwal Dibuat</div>
-              <div>Periksa link Google Sheets di sebelah kiri, lalu klik <strong>Buat Jadwal</strong>.</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab 2: Lecturer Workload -->
-        <div id="panelWorkload" style="display: none;">
-          <div class="table-container" style="background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 5px;">
-            <table id="workloadTable">
-              <thead>
-                <tr>
-                  <th style="width: 48px;">Kode</th>
-                  <th>Nama Dosen</th>
-                  <th style="width: 90px; text-align: center;">P1/P2</th>
-                  <th style="width: 90px; text-align: center;">P3</th>
-                  <th style="width: 80px; text-align: center;">Total</th>
-                  <th style="width: 130px;">Distribusi Beban</th>
-                </tr>
-              </thead>
-              <tbody id="workloadTableBody">
-                <tr>
-                  <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
-                    Belum ada data beban dosen.
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
     </main>
   </div>
 
-  <!-- Credentials Modal for Google Sheets Write Access -->
-  <div id="credsModal" class="modal-backdrop" style="display: none;">
+  <!-- Modal: Edit Assignment -->
+  <div id="modalEditAssignment" class="modal-backdrop" style="display: none;">
     <div class="modal-card">
-      <div class="modal-title">Konfigurasi Akses Tulis Google Sheets</div>
-      <div style="font-size: 12.5px; color: var(--text-muted);">
-        Untuk menulis langsung ke Google Sheet, berikan akses Edit ke akun Service Account atau unggah berkas <code>service_account.json</code> Anda.
+      <div class="modal-header">Ubah Jadwal Sidang Mahasiswa</div>
+      <div id="modalAssignStudentName" style="font-size: 13px; font-weight: 600; color: var(--primary);"></div>
+      <input type="hidden" id="editAssignStudentId">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Hari Pelaksanaan</label>
+          <select id="editAssignDay" class="input-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sesi Jam</label>
+          <select id="editAssignSession" class="input-select"></select>
+        </div>
       </div>
-      <div class="field-group">
-        <label>Unggah berkas service_account.json</label>
-        <input type="file" id="inputServiceAccountFile" accept=".json" class="text-input">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Ruangan</label>
+          <select id="editAssignRoom" class="input-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Penguji 2</label>
+          <select id="editAssignP2" class="input-select"></select>
+        </div>
       </div>
-      <div class="field-group">
-        <label>Atau tempel JSON Service Account</label>
-        <textarea id="inputServiceAccountJson" class="text-input" style="height: 90px; font-family: monospace; font-size: 11px;" placeholder='{"type": "service_account", ...}'></textarea>
+      <div class="form-group" style="margin-top: 4px;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox" id="editAssignLock" checked>
+          <span><strong>Kunci jadwal ini</strong> (tetap dipertahankan saat kalkulasi ulang)</span>
+        </label>
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px;">
-        <button class="btn-download" onclick="closeCredsModal()">Batal</button>
-        <button class="btn-sync" onclick="submitSyncWithCreds()">Simpan & Tulis ke Sheet</button>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+        <button class="btn-secondary" onclick="closeEditModal()">Batal</button>
+        <button class="btn-primary" onclick="saveEditedAssignment()">Simpan Jadwal</button>
       </div>
     </div>
   </div>
 
+  <!-- Modal: Add/Edit Student -->
+  <div id="modalStudent" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header" id="modalStudentTitle">Tambah Mahasiswa</div>
+      <input type="hidden" id="stModalId">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nama Lengkap</label>
+          <input type="text" id="stModalName" class="input-text" placeholder="Nama mahasiswa">
+        </div>
+        <div class="form-group">
+          <label class="form-label">NIM</label>
+          <input type="text" id="stModalNim" class="input-text" placeholder="NIM">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dosen Pembimbing</label>
+        <select id="stModalPemb" class="input-select"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Dosen Penguji 1</label>
+          <select id="stModalPeng1" class="input-select"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Penguji 2 (Opsional)</label>
+          <select id="stModalPeng2" class="input-select"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select id="stModalStatus" class="input-select">
+            <option value="eligible">Layak Sidang (Eligible)</option>
+            <option value="postponed">Ditunda</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Catatan</label>
+          <input type="text" id="stModalNotes" class="input-text" placeholder="Catatan berkas...">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+        <button class="btn-secondary" onclick="closeStudentModal()">Batal</button>
+        <button class="btn-primary" onclick="saveStudent()">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
   <script>
-    let currentFileId = null;
-    let currentDownloadUrl = null;
-    let currentMasterUrl = null;
-    let scheduleData = [];
-    let workloadData = [];
-    let activeSourceMode = 'gsheet';
+    let globalLecturers = [];
+    let globalDays = [];
+    let globalSessions = [];
+    let globalSettings = {};
+    let globalSchedule = [];
+    let globalConflicts = [];
+    let activeFilterChip = 'all';
 
-    // Load defaults from .env on page startup
     window.addEventListener('DOMContentLoaded', async () => {
-      try {
-        const resp = await fetch('/api/config');
-        if (resp.ok) {
-          const cfg = await resp.json();
-          if (cfg.master_url) {
-            document.getElementById('inputMasterUrl').value = cfg.master_url;
-            document.getElementById('masterEnvNote').textContent = 'Terisi otomatis dari .env';
-          }
-          if (cfg.berhalangan_url) {
-            document.getElementById('inputBerhalanganUrl').value = cfg.berhalangan_url;
-            document.getElementById('berhEnvNote').textContent = 'Terisi otomatis dari .env';
-          }
-        }
-      } catch (e) {
-        console.warn('Could not load defaults from .env', e);
-      }
+      await loadInitialData();
+      await loadSchedule();
     });
 
-    function setSourceMode(mode) {
-      activeSourceMode = mode;
-      const btnGSheet = document.getElementById('btnModeGSheet');
-      const btnFile = document.getElementById('btnModeFile');
-      const secGSheet = document.getElementById('sectionGSheet');
-      const secFile = document.getElementById('sectionFile');
+    function showToast(msg, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 2800);
+    }
 
-      if (mode === 'gsheet') {
-        btnGSheet.classList.add('active');
-        btnFile.classList.remove('active');
-        secGSheet.style.display = 'block';
-        secFile.style.display = 'none';
+    async function loadInitialData() {
+      const [lRes, dRes, sRes, stRes] = await Promise.all([
+        fetch('/api/lecturers').then(r => r.json()),
+        fetch('/api/days').then(r => r.json()),
+        fetch('/api/sessions').then(r => r.json()),
+        fetch('/api/settings').then(r => r.json())
+      ]);
+      globalLecturers = lRes;
+      globalDays = dRes;
+      globalSessions = sRes;
+      globalSettings = stRes;
+
+      const inst = globalSettings.institution_name || 'Program Studi Perencanaan Wilayah dan Kota - ITK';
+      document.getElementById('headerInstitutionName').textContent = inst;
+      document.getElementById('printTitle').textContent = `Jadwal Ujian Sidang Skripsi — ${inst}`;
+      document.getElementById('printSub').textContent = `Dicetak pada ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}`;
+    }
+
+    function getRoomLabel(roomNum) {
+      const raw = globalSettings.room_names || '';
+      const arr = raw.split(',').map(s => s.trim()).filter(Boolean);
+      if (roomNum - 1 >= 0 && roomNum - 1 < arr.length) return arr[roomNum - 1];
+      return `Ruang ${roomNum}`;
+    }
+
+    function switchView(viewName) {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+
+      if (viewName === 'schedule') {
+        document.querySelectorAll('.nav-item')[0].classList.add('active');
+        document.getElementById('viewSchedule').classList.add('active');
+        loadSchedule();
+      } else if (viewName === 'students') {
+        document.querySelectorAll('.nav-item')[1].classList.add('active');
+        document.getElementById('viewStudents').classList.add('active');
+        loadStudents();
+      } else if (viewName === 'lecturers') {
+        document.querySelectorAll('.nav-item')[2].classList.add('active');
+        document.getElementById('viewLecturers').classList.add('active');
+        loadAvailabilityMatrix();
+      } else if (viewName === 'settings') {
+        document.querySelectorAll('.nav-item')[3].classList.add('active');
+        document.getElementById('viewSettings').classList.add('active');
+        loadSettingsView();
+      }
+    }
+
+    // ==================== SCHEDULE & CONFLICTS ====================
+
+    async function loadSchedule() {
+      const res = await fetch('/api/schedule');
+      if (!res.ok) return;
+      const data = await res.json();
+      globalSchedule = data.schedule || [];
+      globalConflicts = data.conflicts || [];
+
+      const lockedCount = globalSchedule.filter(a => a.is_locked).length;
+      document.getElementById('kpiEligible').textContent = data.total_eligible_students;
+      document.getElementById('kpiScheduled').textContent = data.scheduled_count;
+      document.getElementById('kpiLocked').textContent = lockedCount;
+
+      const cCard = document.getElementById('kpiConflictCard');
+      const cText = document.getElementById('kpiConflicts');
+      if (globalConflicts.length > 0) {
+        cCard.className = 'kpi-card danger';
+        cText.textContent = `${globalConflicts.length} Bentrok`;
       } else {
-        btnFile.classList.add('active');
-        btnGSheet.classList.remove('active');
-        secGSheet.style.display = 'none';
-        secFile.style.display = 'block';
+        cCard.className = 'kpi-card ok';
+        cText.textContent = '0 Bentrok';
       }
-    }
 
-    // File Input labels update
-    document.getElementById('inputMaster').addEventListener('change', function(e) {
-      if (e.target.files.length > 0) {
-        document.getElementById('nameMaster').textContent = e.target.files[0].name;
-      }
-    });
-
-    document.getElementById('inputBerhalangan').addEventListener('change', function(e) {
-      if (e.target.files.length > 0) {
-        document.getElementById('nameBerhalangan').textContent = e.target.files[0].name;
-      }
-    });
-
-    // Tab Switching
-    function switchTab(tab) {
-      const btnSchedule = document.getElementById('tabBtnSchedule');
-      const btnWorkload = document.getElementById('tabBtnWorkload');
-      const panelSchedule = document.getElementById('panelSchedule');
-      const panelWorkload = document.getElementById('panelWorkload');
-      const searchBox = document.getElementById('searchBoxContainer');
-
-      if (tab === 'schedule') {
-        btnSchedule.classList.add('active');
-        btnWorkload.classList.remove('active');
-        panelSchedule.style.display = 'block';
-        panelWorkload.style.display = 'none';
-        searchBox.style.display = 'flex';
+      const alertBanner = document.getElementById('conflictAlertBanner');
+      if (globalConflicts.length > 0) {
+        alertBanner.innerHTML = `<strong>Perhatian: Ditemukan ${globalConflicts.length} Bentrok pada Jadwal:</strong>` +
+          `<ul style="margin-left: 18px; margin-top: 4px;">` +
+          globalConflicts.map(c => `<li>${escapeHtml(c.message)}</li>`).join('') +
+          `</ul>`;
+        alertBanner.style.display = 'block';
       } else {
-        btnWorkload.classList.add('active');
-        btnSchedule.classList.remove('active');
-        panelSchedule.style.display = 'none';
-        panelWorkload.style.display = 'block';
-        searchBox.style.display = 'none';
-      }
-    }
-
-    // Submit Schedule Generation
-    document.getElementById('btnSubmit').addEventListener('click', async function() {
-      const p2Mode = document.querySelector('input[name="p2Mode"]:checked').value;
-      const rooms = document.getElementById('inputRooms').value || 5;
-
-      const errorBanner = document.getElementById('errorBanner');
-      const warningBanner = document.getElementById('warningBanner');
-      const successBanner = document.getElementById('successBanner');
-      const btnSubmit = document.getElementById('btnSubmit');
-      const btnSubmitText = document.getElementById('btnSubmitText');
-
-      errorBanner.style.display = 'none';
-      warningBanner.style.display = 'none';
-      successBanner.style.display = 'none';
-
-      const formData = new FormData();
-      formData.append('auto_assign_penguji2', p2Mode === 'auto');
-      formData.append('max_rooms_per_slot', rooms);
-
-      if (activeSourceMode === 'gsheet') {
-        const mUrl = document.getElementById('inputMasterUrl').value.trim();
-        const bUrl = document.getElementById('inputBerhalanganUrl').value.trim();
-        if (!mUrl || !bUrl) {
-          errorBanner.textContent = "Mohon isi link Google Sheets untuk Master Ujian dan Berhalangan Dosen.";
-          errorBanner.style.display = 'block';
-          return;
-        }
-        formData.append('master_url', mUrl);
-        formData.append('berhalangan_url', bUrl);
-      } else {
-        const masterFile = document.getElementById('inputMaster').files[0];
-        const berhalanganFile = document.getElementById('inputBerhalangan').files[0];
-        if (!masterFile || !berhalanganFile) {
-          errorBanner.textContent = "Mohon pilih kedua berkas (Master Ujian dan Berhalangan Dosen) terlebih dahulu.";
-          errorBanner.style.display = 'block';
-          return;
-        }
-        formData.append('master_file', masterFile);
-        formData.append('berhalangan_file', berhalanganFile);
+        alertBanner.style.display = 'none';
       }
 
-      btnSubmit.disabled = true;
-      btnSubmitText.innerHTML = '<div class="spinner"></div> Menghitung...';
+      renderFilteredSchedule();
+      renderWorkloadTable(data.lecturer_workload || []);
+    }
 
-      try {
-        const response = await fetch('/api/schedule', {
-          method: 'POST',
-          body: formData
-        });
+    function setScheduleFilter(filterType, btn) {
+      activeFilterChip = filterType;
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      renderFilteredSchedule();
+    }
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || 'Gagal membuat jadwal.');
+    function getStudentConflictSet() {
+      const badStudents = new Set();
+      globalConflicts.forEach(c => {
+        if (c.student_id) badStudents.add(c.student_id);
+        if (c.students && Array.isArray(c.students)) {
+          c.students.forEach(s => {
+            const cleanName = s.split(' (')[0].trim();
+            const match = globalSchedule.find(a => a.student_name === cleanName);
+            if (match) badStudents.add(match.student_id);
+          });
         }
-
-        scheduleData = data.schedule || [];
-        workloadData = data.lecturer_workload || [];
-        currentFileId = data.file_id;
-        currentDownloadUrl = data.download_url;
-        currentMasterUrl = data.master_url;
-
-        // Enable action buttons
-        const btnDownload = document.getElementById('btnDownload');
-        btnDownload.disabled = false;
-        btnDownload.onclick = () => window.location.href = currentDownloadUrl;
-
-        const btnSync = document.getElementById('btnSyncGSheet');
-        btnSync.disabled = false;
-        btnSync.onclick = () => syncScheduleToGoogleSheet();
-
-        // Update status badge
-        const badge = document.getElementById('statusBadge');
-        const badgeText = document.getElementById('statusText');
-        badgeText.textContent = `${data.summary.scheduled_students}/${data.summary.total_eligible_students} Mahasiswa Terjadwal • 0 Bentrok (${data.summary.solve_time_ms}ms)`;
-        badge.classList.remove('hidden');
-
-        // Render warnings if any
-        if (data.warnings && data.warnings.length > 0) {
-          warningBanner.innerHTML = `<strong>Peringatan Verifikasi Jadwal (${data.warnings.length}):</strong>` +
-            `<ul style="margin-left: 18px; margin-top: 4px;">` +
-            data.warnings.map(w => `<li>${w.lecturer ? '<strong>' + escapeHtml(w.lecturer) + '</strong>: ' : ''}${escapeHtml(w.message)}</li>`).join('') +
-            `</ul>`;
-          warningBanner.style.display = 'block';
-        }
-
-        // Render counts
-        document.getElementById('scheduleCount').textContent = `(${scheduleData.length})`;
-        document.getElementById('lecturerCount').textContent = `(${workloadData.length})`;
-
-        // Render views
-        renderSchedule(scheduleData);
-        renderWorkload(workloadData);
-
-      } catch (err) {
-        errorBanner.textContent = err.message;
-        errorBanner.style.display = 'block';
-      } finally {
-        btnSubmit.disabled = false;
-        btnSubmitText.textContent = 'Buat Jadwal';
-      }
-    });
-
-    // Sync to Google Sheet
-    async function syncScheduleToGoogleSheet(customCreds = null) {
-      if (!currentFileId) return;
-
-      const btnSync = document.getElementById('btnSyncGSheet');
-      const btnSyncText = document.getElementById('btnSyncText');
-      const errorBanner = document.getElementById('errorBanner');
-      const successBanner = document.getElementById('successBanner');
-
-      errorBanner.style.display = 'none';
-      successBanner.style.display = 'none';
-
-      btnSync.disabled = true;
-      btnSyncText.textContent = 'Menulis ke Sheet...';
-
-      const formData = new FormData();
-      formData.append('file_id', currentFileId);
-      if (currentMasterUrl) formData.append('master_url', currentMasterUrl);
-      if (customCreds) formData.append('credentials_json', customCreds);
-
-      try {
-        const resp = await fetch('/api/schedule/sync-google-sheet', {
-          method: 'POST',
-          body: formData
-        });
-
-        const resData = await resp.json();
-
-        if (resp.ok && resData.success) {
-          successBanner.textContent = resData.message || 'Jadwal berhasil disinkronkan ke Google Sheet!';
-          successBanner.style.display = 'block';
-          closeCredsModal();
-        } else if (resData.requires_credentials) {
-          openCredsModal();
-        } else {
-          throw new Error(resData.detail || resData.message || 'Gagal menulis ke Google Sheet.');
-        }
-      } catch (e) {
-        errorBanner.textContent = e.message;
-        errorBanner.style.display = 'block';
-      } finally {
-        btnSync.disabled = false;
-        btnSyncText.textContent = 'Tulis ke Google Sheet';
-      }
+      });
+      return badStudents;
     }
 
-    function openCredsModal() {
-      document.getElementById('credsModal').style.display = 'flex';
+    function renderFilteredSchedule() {
+      const q = document.getElementById('scheduleSearch').value.toLowerCase().trim();
+      const badStudents = getStudentConflictSet();
+
+      let filtered = globalSchedule.filter(a => {
+        if (activeFilterChip === 'locked' && !a.is_locked) return false;
+        if (activeFilterChip === 'unlocked' && a.is_locked) return false;
+        if (activeFilterChip === 'conflict' && !badStudents.has(a.student_id)) return false;
+
+        if (!q) return true;
+        return (
+          a.student_name.toLowerCase().includes(q) ||
+          a.pembimbing_name.toLowerCase().includes(q) ||
+          a.penguji1_name.toLowerCase().includes(q) ||
+          a.penguji2_name.toLowerCase().includes(q) ||
+          a.day_label.toLowerCase().includes(q)
+        );
+      });
+
+      renderScheduleCards(filtered, badStudents);
     }
 
-    function closeCredsModal() {
-      document.getElementById('credsModal').style.display = 'none';
-    }
-
-    async function submitSyncWithCreds() {
-      const fileInput = document.getElementById('inputServiceAccountFile');
-      const textInput = document.getElementById('inputServiceAccountJson').value.trim();
-
-      if (fileInput.files.length > 0) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          await syncScheduleToGoogleSheet(e.target.result);
-        };
-        reader.readAsText(fileInput.files[0]);
-      } else if (textInput) {
-        await syncScheduleToGoogleSheet(textInput);
-      } else {
-        alert('Mohon pilih file JSON atau tempel teks JSON kredensial.');
-      }
-    }
-
-    // Render Grouped Schedule Cards
-    function renderSchedule(items) {
-      const container = document.getElementById('scheduleContainer');
+    function renderScheduleCards(items, badStudents) {
+      const container = document.getElementById('scheduleCardsContainer');
       if (!items || items.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-title">Tidak Ada Mahasiswa Ditemukan</div>
-            <div>Sesuaikan kata kunci pencarian Anda.</div>
-          </div>`;
+        container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted);">Tidak ada jadwal yang sesuai filter.</div>`;
         return;
       }
 
       const groups = {};
       items.forEach(item => {
-        const key = `${item.hari}|${item.tanggal}|${item.sesi}|${item.waktu}`;
+        const key = `${item.exam_day_id}|${item.day_label}|${item.date_iso}|${item.session_num}|${item.time_range}`;
         if (!groups[key]) groups[key] = [];
         groups[key].push(item);
       });
 
       let html = '';
-      for (const [key, groupItems] of Object.entries(groups)) {
-        const [hari, tanggal, sesi, waktu] = key.split('|');
-        const dateDisplay = tanggal ? ` (${tanggal})` : '';
+      for (const [key, rows] of Object.entries(groups)) {
+        const [dayId, dayLabel, dateIso, sessNum, timeRange] = key.split('|');
+        const allSessionLocked = rows.every(r => r.is_locked);
 
         html += `
           <div class="session-card">
             <div class="session-header">
-              <div>${escapeHtml(hari)}${dateDisplay} &bull; Sesi ${sesi}</div>
-              <div class="session-meta">${escapeHtml(waktu)} &bull; ${groupItems.length} Mahasiswa</div>
+              <div>${escapeHtml(dayLabel)} (${dateIso}) &bull; Sesi ${sessNum} (${timeRange})</div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 400; color: var(--text-muted);">${rows.length} Sidang</span>
+                <button class="btn-lock ${allSessionLocked ? 'is-locked' : ''}" onclick="bulkLockSession(${dayId}, ${sessNum}, ${!allSessionLocked})">
+                  ${allSessionLocked ? 'Sesi Terkunci' : 'Kunci Sesi'}
+                </button>
+              </div>
             </div>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th style="width: 44px;">Urut</th>
-                    <th style="width: 180px;">Mahasiswa</th>
-                    <th>Pembimbing</th>
-                    <th>Penguji 1</th>
-                    <th>Penguji 2</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${groupItems.map(row => `
-                    <tr>
-                      <td style="font-weight: 600; color: var(--text-muted);">${row.urut}</td>
-                      <td><strong>${escapeHtml(row.mahasiswa)}</strong></td>
-                      <td>${escapeHtml(row.pembimbing)}</td>
-                      <td>${escapeHtml(row.penguji_1)}</td>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 110px;">Ruang</th>
+                  <th>Mahasiswa</th>
+                  <th>Pembimbing</th>
+                  <th>Penguji 1</th>
+                  <th>Penguji 2</th>
+                  <th style="width: 105px; text-align: center;">Kunci</th>
+                  <th style="width: 60px; text-align: center;" class="no-print">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(r => {
+                  const hasConflict = badStudents.has(r.student_id);
+                  return `
+                    <tr class="${hasConflict ? 'row-conflict' : ''}">
+                      <td style="font-weight: 600;">${escapeHtml(getRoomLabel(r.room_num))}</td>
                       <td>
-                        <strong>${escapeHtml(row.penguji_2)}</strong>
+                        <strong>${escapeHtml(r.student_name)}</strong>
+                        ${hasConflict ? `<span class="pill conflict" style="margin-left: 4px;">Bentrok</span>` : ''}
+                      </td>
+                      <td>${escapeHtml(r.pembimbing_name)}</td>
+                      <td>${escapeHtml(r.penguji1_name)}</td>
+                      <td><strong>${escapeHtml(r.penguji2_name)}</strong></td>
+                      <td style="text-align: center;">
+                        <button class="btn-lock ${r.is_locked ? 'is-locked' : ''}" onclick="toggleSingleLock(${r.student_id}, ${!r.is_locked})">
+                          ${r.is_locked ? '&#128274; Terkunci' : '&#128275; Terbuka'}
+                        </button>
+                      </td>
+                      <td style="text-align: center;" class="no-print">
+                        <button class="btn-secondary" style="padding: 3px 8px; font-size: 11px;" onclick="openEditModal(${r.student_id})">Ubah</button>
                       </td>
                     </tr>
-                  `).join('')}
-                </tbody>
-              </table>
-            </div>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
           </div>
         `;
       }
-
       container.innerHTML = html;
     }
 
-    function filterSchedule() {
-      const q = document.getElementById('filterInput').value.toLowerCase().trim();
-      if (!q) {
-        renderSchedule(scheduleData);
-        return;
+    async function toggleSingleLock(studentId, willLock) {
+      const res = await fetch(`/api/schedule/assignments/${studentId}/lock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_locked: willLock })
+      });
+      if (res.ok) {
+        showToast(willLock ? 'Jadwal mahasiswa dikunci.' : 'Kunci jadwal dibuka.');
+        await loadSchedule();
       }
-      const filtered = scheduleData.filter(item =>
-        item.mahasiswa.toLowerCase().includes(q) ||
-        item.pembimbing.toLowerCase().includes(q) ||
-        item.penguji_1.toLowerCase().includes(q) ||
-        item.penguji_2.toLowerCase().includes(q) ||
-        item.hari.toLowerCase().includes(q)
-      );
-      renderSchedule(filtered);
     }
 
-    function renderWorkload(dosenItems) {
-      const tbody = document.getElementById('workloadTableBody');
-      if (!dosenItems || dosenItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Tidak ada data.</td></tr>`;
-        return;
+    async function bulkLock(willLock) {
+      const res = await fetch('/api/schedule/lock-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_locked: willLock })
+      });
+      if (res.ok) {
+        showToast(willLock ? 'Semua jadwal berhasil dikunci.' : 'Semua kunci jadwal dibuka.');
+        await loadSchedule();
       }
+    }
 
-      const maxTotal = Math.max(...dosenItems.map(d => d.total), 1);
+    async function bulkLockSession(dayId, sessNum, willLock) {
+      const res = await fetch('/api/schedule/lock-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_locked: willLock, exam_day_id: dayId, session_num: sessNum })
+      });
+      if (res.ok) {
+        showToast(willLock ? `Sesi ${sessNum} dikunci.` : `Kunci Sesi ${sessNum} dibuka.`);
+        await loadSchedule();
+      }
+    }
 
-      tbody.innerHTML = dosenItems.map(d => {
+    function renderWorkloadTable(workload) {
+      const tbody = document.getElementById('workloadTbody');
+      const maxTotal = Math.max(...workload.map(d => d.total), 1);
+      tbody.innerHTML = workload.map(d => {
         const pct = Math.round((d.total / maxTotal) * 100);
         return `
           <tr>
-            <td style="font-weight: 600; color: var(--text-muted);">${d.dosen_id}</td>
-            <td>
-              <strong>${escapeHtml(d.nama)}</strong>
-              ${d.code ? `<span class="pill">${escapeHtml(d.code)}</span>` : ''}
-            </td>
+            <td style="font-weight: 600; color: var(--text-muted);">${d.code}</td>
+            <td><strong>${escapeHtml(d.nama)}</strong></td>
             <td style="text-align: center;">${d.p1_p2_count}</td>
             <td style="text-align: center;"><strong>${d.p3_count}</strong></td>
             <td style="text-align: center; font-weight: 600;">${d.total}</td>
             <td>
               <span>${d.total}</span>
-              <div class="bar-container">
-                <div class="bar-fill" style="width: ${pct}%;"></div>
-              </div>
+              <div class="bar-container"><div class="bar-fill" style="width: ${pct}%;"></div></div>
             </td>
           </tr>
         `;
       }).join('');
     }
 
+    async function runAutoSchedule() {
+      const btn = document.getElementById('btnRunSchedule');
+      btn.disabled = true;
+      btn.innerHTML = '<span>Menghitung...</span>';
+      try {
+        const formData = new FormData();
+        formData.append('respect_locked', true);
+        formData.append('auto_assign_penguji2', (globalSettings.p2_mode || 'auto') === 'auto');
+        const res = await fetch('/api/schedule/generate', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Gagal menghitung jadwal.');
+        showToast(`Jadwal berhasil dikalkulasi (${data.solve_time_ms}ms).`);
+        await loadSchedule();
+      } catch (e) {
+        showToast(e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg><span>Buat Jadwal Otomatis</span>';
+      }
+    }
+
+    function exportScheduleXlsx() {
+      window.location.href = '/api/schedule/export';
+    }
+
+    // ==================== EDIT ASSIGNMENT MODAL ====================
+
+    function openEditModal(studentId) {
+      const assignment = globalSchedule.find(a => a.student_id === studentId);
+      if (!assignment) return;
+
+      document.getElementById('editAssignStudentId').value = studentId;
+      document.getElementById('modalAssignStudentName').textContent = `${assignment.student_name} (${assignment.nim || '-'})`;
+
+      document.getElementById('editAssignDay').innerHTML = globalDays.map(d =>
+        `<option value="${d.id}" ${d.id === assignment.exam_day_id ? 'selected' : ''}>${d.day_label} (${d.date_iso})</option>`
+      ).join('');
+
+      document.getElementById('editAssignSession').innerHTML = globalSessions.map(s =>
+        `<option value="${s.session_num}" ${s.session_num === assignment.session_num ? 'selected' : ''}>Sesi ${s.session_num} (${s.time_range})</option>`
+      ).join('');
+
+      const maxRooms = parseInt(globalSettings.max_rooms_per_slot || '5');
+      let roomOpts = '';
+      for (let r = 1; r <= maxRooms; r++) {
+        roomOpts += `<option value="${r}" ${r === assignment.room_num ? 'selected' : ''}>${getRoomLabel(r)}</option>`;
+      }
+      document.getElementById('editAssignRoom').innerHTML = roomOpts;
+
+      document.getElementById('editAssignP2').innerHTML = globalLecturers.map(l =>
+        `<option value="${l.id}" ${l.id === assignment.penguji2_id ? 'selected' : ''}>${l.name} (${l.code})</option>`
+      ).join('');
+
+      document.getElementById('editAssignLock').checked = true;
+      document.getElementById('modalEditAssignment').style.display = 'flex';
+    }
+
+    function closeEditModal() {
+      document.getElementById('modalEditAssignment').style.display = 'none';
+    }
+
+    async function saveEditedAssignment() {
+      const studentId = parseInt(document.getElementById('editAssignStudentId').value);
+      const dayId = parseInt(document.getElementById('editAssignDay').value);
+      const sessNum = parseInt(document.getElementById('editAssignSession').value);
+      const roomNum = parseInt(document.getElementById('editAssignRoom').value);
+      const p2Id = parseInt(document.getElementById('editAssignP2').value);
+      const isLocked = document.getElementById('editAssignLock').checked;
+
+      const res = await fetch(`/api/schedule/assignments/${studentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exam_day_id: dayId, session_num: sessNum, room_num: roomNum, penguji2_id: p2Id, is_locked: isLocked })
+      });
+
+      if (res.ok) {
+        closeEditModal();
+        showToast('Perubahan jadwal disimpan.');
+        await loadSchedule();
+      } else {
+        const err = await res.json();
+        showToast(err.detail || 'Gagal menyimpan perubahan.', 'error');
+      }
+    }
+
+    // ==================== STUDENTS VIEW ====================
+
+    async function loadStudents() {
+      const status = document.getElementById('filterStudentStatus').value;
+      const url = status ? `/api/students?status=${status}` : '/api/students';
+      const students = await fetch(url).then(r => r.json());
+
+      document.getElementById('studentsTbody').innerHTML = students.map((s, idx) => `
+        <tr>
+          <td style="color: var(--text-muted);">${idx + 1}</td>
+          <td><strong>${escapeHtml(s.name)}</strong></td>
+          <td>${escapeHtml(s.nim || '-')}</td>
+          <td>${escapeHtml(s.pembimbing_name)}</td>
+          <td>${escapeHtml(s.penguji1_name)}</td>
+          <td>${escapeHtml(s.penguji2_preset_name || '-')}</td>
+          <td style="text-align: center;">
+            <span class="pill ${s.status === 'eligible' ? 'ok' : ''}">
+              ${s.status === 'eligible' ? 'Layak' : 'Ditunda'}
+            </span>
+          </td>
+          <td style="text-align: center;">
+            <button class="btn-secondary" style="padding: 2px 6px; font-size: 11px;" onclick="editStudent(${s.id})">Edit</button>
+            <button class="btn-secondary" style="padding: 2px 6px; font-size: 11px; color: #b91c1c;" onclick="deleteStudent(${s.id})">&times;</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openStudentModal(existing = null) {
+      document.getElementById('stModalId').value = existing ? existing.id : '';
+      document.getElementById('modalStudentTitle').textContent = existing ? 'Edit Data Mahasiswa' : 'Tambah Mahasiswa';
+      document.getElementById('stModalName').value = existing ? existing.name : '';
+      document.getElementById('stModalNim').value = existing ? existing.nim : '';
+      document.getElementById('stModalNotes').value = existing ? (existing.notes || '') : '';
+      document.getElementById('stModalStatus').value = existing ? existing.status : 'eligible';
+
+      const lectOptions = globalLecturers.map(l => `<option value="${l.id}">${l.name} (${l.code})</option>`).join('');
+      document.getElementById('stModalPemb').innerHTML = lectOptions;
+      document.getElementById('stModalPeng1').innerHTML = lectOptions;
+      document.getElementById('stModalPeng2').innerHTML = `<option value="">(Belum ditentukan)</option>` + lectOptions;
+
+      if (existing) {
+        document.getElementById('stModalPemb').value = existing.pembimbing_id;
+        document.getElementById('stModalPeng1').value = existing.penguji1_id;
+        document.getElementById('stModalPeng2').value = existing.penguji2_preset_id || '';
+      }
+      document.getElementById('modalStudent').style.display = 'flex';
+    }
+
+    function closeStudentModal() { document.getElementById('modalStudent').style.display = 'none'; }
+
+    async function editStudent(id) {
+      const res = await fetch(`/api/students/${id}`);
+      if (res.ok) openStudentModal(await res.json());
+    }
+
+    async function deleteStudent(id) {
+      if (!confirm('Yakin ingin menghapus data mahasiswa ini?')) return;
+      await fetch(`/api/students/${id}`, { method: 'DELETE' });
+      showToast('Data mahasiswa dihapus.');
+      await loadStudents();
+      await loadSchedule();
+    }
+
+    async function saveStudent() {
+      const id = document.getElementById('stModalId').value;
+      const name = document.getElementById('stModalName').value.trim();
+      const nim = document.getElementById('stModalNim').value.trim();
+      const pembId = parseInt(document.getElementById('stModalPemb').value);
+      const peng1Id = parseInt(document.getElementById('stModalPeng1').value);
+      const peng2Val = document.getElementById('stModalPeng2').value;
+      const peng2Id = peng2Val ? parseInt(peng2Val) : null;
+      const status = document.getElementById('stModalStatus').value;
+      const notes = document.getElementById('stModalNotes').value.trim();
+
+      if (!name) { showToast('Nama mahasiswa wajib diisi.', 'error'); return; }
+      if (pembId === peng1Id) { showToast('Pembimbing dan Penguji 1 tidak boleh sama.', 'error'); return; }
+
+      const payload = { name, nim, bidang: 'PWK', pembimbing_id: pembId, penguji1_id: peng1Id, penguji2_preset_id: peng2Id, status, notes };
+
+      if (id) {
+        await fetch(`/api/students/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        showToast('Data mahasiswa diperbarui.');
+      } else {
+        await fetch('/api/students', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        showToast('Mahasiswa baru ditambahkan.');
+      }
+      closeStudentModal();
+      await loadStudents();
+      await loadSchedule();
+    }
+
+    // ==================== AVAILABILITY MATRIX ====================
+
+    async function loadAvailabilityMatrix() {
+      const blocks = await fetch('/api/blocks').then(r => r.json());
+      const blockedSet = new Set(blocks.map(b => `${b.lecturer_id}_${b.exam_day_id}_${b.session_num}`));
+
+      document.getElementById('matrixHeaderDays').innerHTML = `<th rowspan="2" style="width: 170px;">Dosen</th>` +
+        globalDays.map(d => `<th colspan="4" style="text-align: center; border-left: 1px solid var(--border-color);">${d.day_label}<br><span style="font-size: 10px; font-weight: normal;">${d.date_iso}</span></th>`).join('');
+
+      document.getElementById('matrixHeaderSessions').innerHTML = globalDays.map(() => `
+        <th style="font-size: 10px; padding: 4px; text-align: center; border-left: 1px solid var(--border-color);">S1</th>
+        <th style="font-size: 10px; padding: 4px; text-align: center;">S2</th>
+        <th style="font-size: 10px; padding: 4px; text-align: center;">S3</th>
+        <th style="font-size: 10px; padding: 4px; text-align: center;">S4</th>
+      `).join('');
+
+      document.getElementById('matrixTbody').innerHTML = globalLecturers.map(l => {
+        let cellsHtml = '';
+        globalDays.forEach(d => {
+          [1, 2, 3, 4].forEach(sNum => {
+            const isBlocked = blockedSet.has(`${l.id}_${d.id}_${sNum}`);
+            cellsHtml += `
+              <td class="matrix-cell ${isBlocked ? 'blocked' : 'free'}"
+                  onclick="toggleAvailability(${l.id}, ${d.id}, ${sNum}, ${!isBlocked})">
+                ${isBlocked ? 'X' : '&bull;'}
+              </td>
+            `;
+          });
+        });
+        return `<tr><td style="font-weight: 500;">${escapeHtml(l.name)} <span class="pill">${l.code}</span></td>${cellsHtml}</tr>`;
+      }).join('');
+    }
+
+    async function toggleAvailability(lecturerId, dayId, sNum, willBlock) {
+      await fetch('/api/blocks/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lecturer_id: lecturerId, exam_day_id: dayId, session_num: sNum, blocked: willBlock, reason: willBlock ? 'Berhalangan' : '' })
+      });
+      showToast(willBlock ? 'Sesi ditandai berhalangan.' : 'Sesi ditandai tersedia.');
+      await loadAvailabilityMatrix();
+      await loadSchedule();
+    }
+
+    // ==================== SETTINGS & IMPORT ====================
+
+    async function loadSettingsView() {
+      const [daysRes, sessRes, settRes] = await Promise.all([
+        fetch('/api/days').then(r => r.json()),
+        fetch('/api/sessions').then(r => r.json()),
+        fetch('/api/settings').then(r => r.json())
+      ]);
+
+      document.getElementById('daysTbody').innerHTML = daysRes.map(d => `
+        <tr>
+          <td>${d.date_iso}</td>
+          <td><strong>${d.day_label}</strong></td>
+          <td style="text-align: center;">
+            <button class="btn-secondary" style="padding: 2px 6px; color: #b91c1c;" onclick="deleteExamDay(${d.id})">&times;</button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('sessionsConfigList').innerHTML = sessRes.map(s => `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 60px; font-weight: 600;">Sesi ${s.session_num}</span>
+          <input type="text" id="sessTime_${s.session_num}" class="input-text" value="${escapeHtml(s.time_range)}">
+          <button class="btn-secondary" onclick="saveSessionTime(${s.session_num})">Simpan</button>
+        </div>
+      `).join('');
+
+      document.getElementById('settingInstitution').value = settRes.institution_name || '';
+      document.getElementById('settingRoomNames').value = settRes.room_names || '';
+      document.getElementById('settingMaxRooms').value = settRes.max_rooms_per_slot || '5';
+      document.getElementById('settingP2Mode').value = settRes.p2_mode || 'auto';
+    }
+
+    async function saveSessionTime(sessNum) {
+      const val = document.getElementById(`sessTime_${sessNum}`).value.trim();
+      if (!val) return;
+      await fetch(`/api/sessions/${sessNum}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ time_range: val })
+      });
+      await loadInitialData();
+      showToast(`Jam Sesi ${sessNum} diperbarui.`);
+    }
+
+    async function addExamDay() {
+      const dt = document.getElementById('inputNewDate').value;
+      const lbl = document.getElementById('inputNewDayLabel').value.trim();
+      if (!dt || !lbl) { showToast('Lengkapi tanggal dan label hari.', 'error'); return; }
+      await fetch('/api/days', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date_iso: dt, day_label: lbl }) });
+      await loadInitialData();
+      await loadSettingsView();
+      showToast('Hari ujian ditambahkan.');
+    }
+
+    async function deleteExamDay(id) {
+      if (!confirm('Hapus hari ujian ini?')) return;
+      await fetch(`/api/days/${id}`, { method: 'DELETE' });
+      await loadInitialData();
+      await loadSettingsView();
+      showToast('Hari ujian dihapus.');
+    }
+
+    async function saveSettings() {
+      const payload = {
+        max_rooms_per_slot: document.getElementById('settingMaxRooms').value,
+        p2_mode: document.getElementById('settingP2Mode').value,
+        institution_name: document.getElementById('settingInstitution').value,
+        room_names: document.getElementById('settingRoomNames').value
+      };
+      await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      await loadInitialData();
+      showToast('Pengaturan berhasil disimpan.');
+    }
+
+    async function importNewXlsx() {
+      const mFile = document.getElementById('importMasterFile').files[0];
+      const bFile = document.getElementById('importBerhFile').files[0];
+      if (!mFile || !bFile) { showToast('Pilih file master.xlsx dan berhalangan.xlsx.', 'error'); return; }
+      if (!confirm('Impor ulang akan mengganti seluruh data mahasiswa, dosen, dan jadwal saat ini. Lanjutkan?')) return;
+
+      const fd = new FormData();
+      fd.append('master_file', mFile);
+      fd.append('berhalangan_file', bFile);
+      const res = await fetch('/api/import-xlsx', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`Berhasil mengimpor ${data.summary.students_seeded} mahasiswa & ${data.summary.locked_assignments_seeded} jadwal terkunci.`);
+        await loadInitialData();
+        await loadSchedule();
+      } else {
+        showToast(data.detail || 'Gagal mengimpor.', 'error');
+      }
+    }
+
     function escapeHtml(str) {
       if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
   </script>
 </body>

@@ -5,112 +5,147 @@ import openpyxl
 from starlette.testclient import TestClient
 
 from app import app
-from scheduler.parser import load_master_and_berhalangan
-from scheduler.solver import solve_schedule
-from scheduler.exporter import export_schedule_to_excel
+from scheduler.db import init_db
+from scheduler.seed import seed_database_from_xlsx
+from scheduler.crud import (
+    list_students, list_lecturers, list_exam_days,
+    get_active_schedule, validate_conflicts, update_assignment
+)
+from scheduler.db_solver import run_db_scheduler
+from scheduler.db_exporter import export_db_schedule_to_excel
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 MASTER_PATH = os.path.join(TEST_DATA_DIR, "master.xlsx")
 BERHALANGAN_PATH = os.path.join(TEST_DATA_DIR, "berhalangan.xlsx")
 
-def test_real_data_schedule_and_export():
-    assert os.path.exists(MASTER_PATH)
-    assert os.path.exists(BERHALANGAN_PATH)
+def test_sqlite_seeding_and_crud():
+    # 1. Test Seed (including locked assignments from Jadwal sheet)
+    res = seed_database_from_xlsx(MASTER_PATH, BERHALANGAN_PATH, reset=True)
+    assert res["lecturers_seeded"] == 16
+    assert res["days_seeded"] == 8
+    assert res["students_seeded"] >= 52
+    assert res["locked_assignments_seeded"] == 52
 
-    with open(MASTER_PATH, "rb") as f:
-        master_bytes = f.read()
-    with open(BERHALANGAN_PATH, "rb") as f:
-        berhalangan_bytes = f.read()
+    students = list_students(status="eligible")
+    assert len(students) == 52
 
-    students, dosen_list, sessions, blocked_slots, warnings = load_master_and_berhalangan(
-        master_bytes, berhalangan_bytes
+    lecturers = list_lecturers()
+    assert len(lecturers) == 16
+
+    days = list_exam_days()
+    assert len(days) == 8
+
+    # Verify seeded schedule is locked by default
+    seeded_sched = get_active_schedule()
+    assert len(seeded_sched) == 52
+    assert all(a["is_locked"] == 1 for a in seeded_sched)
+
+def test_db_scheduler_and_export():
+    # 2. Test Auto-scheduler (full re-optimization with respect_locked=False -> 0 conflicts)
+    res = run_db_scheduler(respect_locked=False, auto_assign_p2=True)
+    assert res["scheduled_students"] == 52
+    assert res["conflicts_count"] == 0
+
+    schedule = get_active_schedule()
+    assert len(schedule) == 52
+
+    # Verify no double booking in any session
+    session_lecturers = {}
+    for a in schedule:
+        key = (a["exam_day_id"], a["session_num"])
+        if key not in session_lecturers:
+            session_lecturers[key] = []
+        l_list = [a["pembimbing_id"], a["penguji1_id"], a["penguji2_id"]]
+        # Distinctness
+        assert a["penguji2_id"] != a["pembimbing_id"]
+        assert a["penguji2_id"] != a["penguji1_id"]
+        session_lecturers[key].extend(l_list)
+
+    for key, l_list in session_lecturers.items():
+        assert len(l_list) == len(set(l_list))
+
+    # Test Excel Export
+    xlsx_bytes = export_db_schedule_to_excel()
+    assert len(xlsx_bytes) > 0
+
+    wb = openpyxl.load_workbook(io.BytesIO(xlsx_bytes), data_only=True)
+    assert "Jadwal Ujian" in wb.sheetnames
+    assert "Beban Dosen" in wb.sheetnames
+    ws_j = wb["Jadwal Ujian"]
+    assert ws_j.max_row == 55 # row 1 title, row 3 header, rows 4..55 = 52 students
+
+def test_live_conflict_detection_and_lock():
+    # Get first 2 students
+    schedule = get_active_schedule()
+    st1 = schedule[0]
+    st2 = schedule[1]
+
+    # Deliberately move st2 into st1's exact same day, session, and room
+    # To test ROOM_COLLISION and live conflict detection
+    update_assignment(
+        student_id=st2["student_id"],
+        exam_day_id=st1["exam_day_id"],
+        session_num=st1["session_num"],
+        room_num=st1["room_num"],
+        penguji2_id=st1["pembimbing_id"], # Also trigger SAME_EXAMINER or collision
+        is_locked=True
     )
 
-    assert len(students) == 46
-    assert len(dosen_list) == 16
-    assert len(sessions) > 0
+    conflicts = validate_conflicts()
+    assert len(conflicts) > 0
+    conflict_types = {c["type"] for c in conflicts}
+    assert "ROOM_COLLISION" in conflict_types
 
-    # Solve with auto_assign_p2=True (workload balance)
-    res_auto = solve_schedule(
-        students=students,
-        dosen_list=dosen_list,
-        sessions=sessions,
-        blocked_slots=blocked_slots,
-        auto_assign_p2=True,
-        max_rooms_per_slot=5,
-        warnings=warnings
-    )
+    # Re-run scheduler with respect_locked=False to resolve all
+    res = run_db_scheduler(respect_locked=False, auto_assign_p2=True)
+    assert res["conflicts_count"] == 0
 
-    assert res_auto.scheduled_count == 46
-    assert res_auto.solve_time_ms < 5000 # Under 5 seconds
-
-    # Check for NO clashes in any session
-    for s_idx in range(len(sessions)):
-        assignments_in_s = [a for a in res_auto.assignments if a.session_idx == s_idx]
-        assert len(assignments_in_s) <= 5
-
-        lecturers_in_s = []
-        for a in assignments_in_s:
-            lecturers_in_s.append(a.pembimbing_id)
-            lecturers_in_s.append(a.penguji1_id)
-            lecturers_in_s.append(a.penguji2_id)
-            # Ensure penguji2 distinct
-            assert a.penguji2_id != a.pembimbing_id
-            assert a.penguji2_id != a.penguji1_id
-
-        # No double booking in this session
-        assert len(lecturers_in_s) == len(set(lecturers_in_s))
-
-    # Test export
-    exported_bytes = export_schedule_to_excel(master_bytes, res_auto.assignments)
-    assert len(exported_bytes) > 0
-
-    wb_exp = openpyxl.load_workbook(io.BytesIO(exported_bytes), data_only=False)
-    ws_exp = wb_exp['Jadwal']
-    populated_rows = [r for r in range(6, 200) if ws_exp.cell(r, 16).value is not None]
-    assert len(populated_rows) == 46
-
-def test_fastapi_endpoints():
-    with open(MASTER_PATH, "rb") as f:
-        master_bytes = f.read()
-    with open(BERHALANGAN_PATH, "rb") as f:
-        berhalangan_bytes = f.read()
-
+def test_fastapi_rest_endpoints():
     client = TestClient(app)
 
-    # Health check
-    res_health = client.get("/api/health")
-    assert res_health.status_code == 200
-    assert res_health.json()["status"] == "ok"
+    # Health
+    r = client.get("/api/health")
+    assert r.status_code == 200
 
-    # Schedule post
-    files = {
-        "master_file": ("master.xlsx", master_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-        "berhalangan_file": ("berhalangan.xlsx", berhalangan_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    }
-    data = {
-        "auto_assign_penguji2": "true",
-        "max_rooms_per_slot": "5"
-    }
-    res_sched = client.post("/api/schedule", files=files, data=data)
-    assert res_sched.status_code == 200
-    json_data = res_sched.json()
-    assert json_data["summary"]["scheduled_students"] == 46
-    file_id = json_data["file_id"]
+    # Get schedule
+    r = client.get("/api/schedule")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["scheduled_count"] == 52
 
-    # Download get
-    res_dl = client.get(f"/api/schedule/download/{file_id}")
-    assert res_dl.status_code == 200
-    assert len(res_dl.content) > 0
+    # Get students
+    r = client.get("/api/students")
+    assert r.status_code == 200
+    assert len(r.json()) >= 52
 
-    # Config get (reads .env defaults)
-    res_cfg = client.get("/api/config")
-    assert res_cfg.status_code == 200
-    cfg_json = res_cfg.json()
-    assert "master_url" in cfg_json
+    # Toggle block
+    days = list_exam_days()
+    day_id = days[0]["id"]
+    r = client.post("/api/blocks/toggle", json={
+        "lecturer_id": 1,
+        "exam_day_id": day_id,
+        "session_num": 1,
+        "blocked": True,
+        "reason": "Test Block"
+    })
+    assert r.status_code == 200
 
-    # Test sync endpoint without credentials returns requires_credentials gracefully
-    res_sync = client.post("/api/schedule/sync-google-sheet", data={"file_id": file_id})
-    assert res_sync.status_code == 200
-    sync_json = res_sync.json()
-    assert sync_json.get("requires_credentials") is True or sync_json.get("success") is True
+    # Export
+    r = client.get("/api/schedule/export")
+    assert r.status_code == 200
+    assert len(r.content) > 0
+
+    # 1-click lock toggle & bulk lock
+    first_st_id = data["schedule"][0]["student_id"]
+    r = client.patch(f"/api/schedule/assignments/{first_st_id}/lock", json={"is_locked": True})
+    assert r.status_code == 200
+    assert r.json()["is_locked"] is True
+
+    r = client.post("/api/schedule/lock-bulk", json={"is_locked": False})
+    assert r.status_code == 200
+    assert r.json()["updated_count"] >= 52
+
+    # Backup DB
+    r = client.get("/api/backup-db")
+    assert r.status_code == 200
+    assert len(r.content) > 0

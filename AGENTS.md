@@ -1,21 +1,23 @@
 # AGENTS.md
 
 ## Project Goal
-Build and maintain `schedule-matcher`: automate thesis defense scheduling (*jadwal ujian skripsi*) by assigning eligible students to time slots/rooms and balancing `Penguji 2` without lecturer conflicts (*bentrok*) using Google OR-Tools CP-SAT and a clean web UI.
+Build and maintain `schedule-matcher`: a production-grade thesis defense scheduling application (*sistem penjadwalan ujian skripsi*) with SQLite database, interactive availability matrix, manual conflict editor with live validation, Google OR-Tools CP-SAT solver, and world-class UI.
 
 ## Developer Commands
 - Run application locally: `.venv/bin/python app.py` (auto-opens `http://127.0.0.1:8000`).
-- Run all tests: `.venv/bin/pytest -v` (runs parser, solver, and full integration tests on real test data).
+- Run all tests: `.venv/bin/pytest -v` (runs SQLite seeding, CRUD, CP-SAT solver, live conflict validator, and REST API tests).
 - Build Windows `.exe`: `pyinstaller schedule-matcher.spec` (or trigger GitHub Actions on `windows-latest`).
 
 ## Architecture & Conventions
-- `scheduler/parser.py`: Reads `master.xlsx` (`Mahasiswa`, `Dosen`, `Jadwal`) and `berhalangan.xlsx`. Normalizes lecturer names using token sorting/subset matching. Parses free-text availability and cuts off old template rows when dates jump backwards.
-- `scheduler/solver.py`: Formulates OR-Tools CP-SAT model. Enforces 100% hard constraints (no double-booking, distinct examiners, room capacity, blocked slots) and soft objectives (balanced Penguji 2 workload + earlier session preference). Solves in ~1-2 seconds.
-- `scheduler/exporter.py`: Copies original workbook, clears previous values in columns P & Q (`cell.value = None`), and writes assigned `Mhs` and `Dosen` IDs to preserve original formatting and Excel formulas.
-- `scheduler/gsheets.py`: Handles Google Sheets fetching directly via export URL (zero auth for public links) and writing back to live sheets using `gspread` (Service Account / credentials).
-- `app.py`: FastAPI server serving `static/index.html` and handling `/api/schedule`, `/api/schedule/sync-google-sheet`, and `/api/schedule/download/{file_id}`.
-- `static/index.html`: Clean, utilitarian UI compliant with Laws of UX (tabular nums, clear hierarchy, no generic AI styling). Automatically pre-fills Google Sheet links from `.env`.
+- `scheduler/db.py`: SQLite setup with WAL mode and foreign keys enabled. Manages `students`, `lecturers`, `exam_days`, `sessions`, `lecturer_blocks`, `schedule_assignments`, and `app_settings`.
+- `scheduler/seed.py`: One-time seed from Excel files (`master.xlsx` and `berhalangan.xlsx`) to populate the database on initial start.
+- `scheduler/crud.py`: Full CRUD for students, lecturers, exam days, interactive blocks, settings, and live conflict validator (`validate_conflicts()`).
+- `scheduler/db_solver.py`: Formulates OR-Tools CP-SAT model directly against SQLite. Supports slot locking (`is_locked = 1`), room assignment, and workload balancing in < 2s.
+- `scheduler/db_exporter.py`: Generates styled multi-sheet `.xlsx` (`Jadwal Ujian` and `Beban Dosen`) directly from database state.
+- `app.py`: FastAPI server serving `static/index.html` and REST endpoints.
+- `static/index.html`: Responsive, utilitarian UI compliant with Laws of UX (4 rail views: `Jadwal & Konflik`, `Pengajuan Mahasiswa`, `Dosen & Berhalangan`, and `Pengaturan Sesi`).
 
 ## Gotchas & Quirks
-- **openpyxl**: Calling `ws.cell(r, c, value=None)` does NOT clear the cell value (default argument is ignored). Always use `ws.cell(r, c).value = None`.
-- **Packaging**: `ortools` bundles native C++ binaries; always use `schedule-matcher.spec` which uses `collect_all('ortools')` and bundles the `static/` directory.
+- **Database Path**: Defaults to `schedule.db` in working directory. Auto-seeded once if empty and seed files exist.
+- **openpyxl**: Calling `ws.cell(r, c, value=None)` does NOT clear the cell value. Always use `ws.cell(r, c).value = None`.
+- **Packaging**: `schedule-matcher.spec` bundles `static/` directory and uses `collect_all('ortools')`.

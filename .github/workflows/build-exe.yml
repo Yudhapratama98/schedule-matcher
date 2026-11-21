@@ -1,4 +1,4 @@
-name: Build Windows Executable
+name: Build Windows Installer & EXE
 
 on:
   push:
@@ -32,8 +32,45 @@ jobs:
         run: |
           pyinstaller schedule-matcher.spec
 
-      - name: Upload EXE artifact
+      - name: Smoke test EXE
+        shell: pwsh
+        run: |
+          $proc = Start-Process -FilePath "dist\schedule-matcher.exe" -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 20; $i++) {
+            Start-Sleep -Seconds 1
+            try {
+              $resp = Invoke-WebRequest -Uri "http://127.0.0.1:8000/api/health" -UseBasicParsing -TimeoutSec 2
+              if ($resp.StatusCode -eq 200) {
+                $ok = $true
+                break
+              }
+            } catch {}
+          }
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          if (-not $ok) {
+            Write-Error "EXE failed health check"
+            exit 1
+          }
+          Write-Host "EXE smoke test passed!"
+
+      - name: Build Windows Installer (Inno Setup)
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc -ErrorAction SilentlyContinue)) {
+            $inno = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+            if (-not (Test-Path $inno)) {
+              choco install innosetup -y --no-progress
+            }
+          }
+          $iscc = (Get-Command iscc -ErrorAction SilentlyContinue)?.Source
+          if (-not $iscc) { $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" }
+          & $iscc installer.iss
+
+      - name: Upload Installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: schedule-matcher-windows
-          path: dist/schedule-matcher.exe
+          name: schedule-matcher-windows-installer
+          path: |
+            dist/ScheduleMatcherSetup.exe
+            dist/schedule-matcher.exe
